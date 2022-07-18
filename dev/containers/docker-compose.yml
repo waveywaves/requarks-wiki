@@ -21,8 +21,8 @@ services:
 
   wiki:
     build:
-      context: ../..
-      dockerfile: dev/build/Dockerfile
+      context: https://github.com/waveywaves/requarks-wiki
+      dockerfile: Dockerfile
     depends_on:
       - db
     environment:
