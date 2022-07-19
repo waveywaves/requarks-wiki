@@ -8,7 +8,7 @@ x-uffizzi:
     service: wiki
     port: 3000
 
-services:
+services: 
   db:
     image: postgres:11-alpine
     environment:
