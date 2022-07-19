@@ -5,7 +5,7 @@ on:
     branches:
       - main
   pull_request:
-    types: [opened,reopened,synchronize,closed]
+    types: [opened,reopened,synchronize]
 
 jobs:
   build-wiki:
@@ -25,32 +25,27 @@ jobs:
             echo "REL_VERSION=v$BASE_DEV_VERSION-dev.$GITHUB_RUN_NUMBER" >> $GITHUB_ENV
             echo "REL_VERSION_STRICT=$BASE_DEV_VERSION-dev.$GITHUB_RUN_NUMBER" >> $GITHUB_ENV
           fi
-      - name: Login to DockerHub
-        uses: docker/login-action@v2
-        with:
-          registry: docker.io
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v2
         with:
           registry: ghcr.io
-          username: ${{ github.repository_owner }}
+          username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Checkout git repo
         uses: actions/checkout@v3
-      - name: Build and Push Image to Docker Hub
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v3
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/requarks-wiki-${{ env.REL_VERSION_STRICT }}
+      - name: Build and Push Image to GHCR
         uses: docker/build-push-action@v2.9.0
         with:
           context: .
           file: dev/build/Dockerfile
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
           push: true
-          # docker.io/waveywaves/requarks-wiki:canary
-          # docker.io/waveywaves/requarks-wiki-${{ env.REL_VERSION_STRICT }}
-          tags: |
-            
-            ghcr.io/waveywaves/requarks-wiki:canary
-            ghcr.io/waveywaves/requarks-wiki:canary-${{ env.REL_VERSION_STRICT }}
 
   render-compose-file:
     name: Render Docker Compose File
@@ -65,7 +60,7 @@ jobs:
       - name: Render Compose File
         run: |
           WIKI_IMAGE=$(echo ${{ needs.build-wiki.outputs.tags }})
-          export VOTE_IMAGE
+          export WIKI_IMAGE
           # Render simple template from environment variables.
           envsubst < dev/uffizzi/docker-compose.template.yml > docker-compose.rendered.yml
           cat docker-compose.rendered.yml

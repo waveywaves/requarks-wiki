@@ -1,0 +1,35 @@
+name: Build Images and Handle Uffizzi Previews.
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types: [closed]
+
+jobs:
+  delete-preview:
+    name: Delete Uffizzi Preview
+    runs-on: ubuntu-latest
+    steps:
+      - name: Find comment for deployment URL
+        uses: peter-evans/find-comment@v2
+        id: find-comment
+        if: github.event_name == 'pull_request'
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-author: 'github-actions[bot]'
+          body-includes: Uffizzi Preview updated
+      - name: Output deployment ID
+        id: preview
+        run: 'echo ''${{ steps.find-comment.outputs.comment-body }}'' | sed -n "s/Uffizzi Preview ID: \`\(\S*\)\`/::set-output name=id::\1/p"'
+      - name: DEBUG - Echo deployment ID
+        run: 'echo ${{ steps.preview.outputs.id }}'
+      - name: Delete Preview from Uffizzi
+        uses: UffizziCloud/delete-preview-action@main
+        with:
+          id: ${{ steps.preview.outputs.id }}
+          username: vibhav.bobade+wikijs@uffizzi.com
+          server: https://app.uffizzi.com
+          project: wikijs-gyyp
+          password: ${{ secrets.UFFIZZI_PASSWORD }}
